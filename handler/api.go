@@ -10,6 +10,7 @@ import (
 )
 
 func API(w http.ResponseWriter, r *http.Request) {
+	channel := "all"
 	cmds, ok := r.URL.Query()["cmd"]
 	if ok {
 		var fs []async.TypeFunc
@@ -21,7 +22,7 @@ func API(w http.ResponseWriter, r *http.Request) {
 			for {
 				select {
 				case m := <-output:
-					hub.Send("all", &hub.Message{Payload: m})
+					hub.Send(channel, &hub.Message{Payload: m})
 				case <-done:
 					return
 				}
@@ -37,8 +38,9 @@ func API(w http.ResponseWriter, r *http.Request) {
 		err := async.Go(fs...)
 		done <- struct{}{}
 		if err != nil {
-			fmt.Fprintf(w, "\nerr; %v\n", err)
+			hub.Send(channel, &hub.Message{Type: hub.MessageTypeError, Payload: err.Error()})
 		} else {
+			hub.Send(channel, &hub.Message{Type: hub.MessageTypeSuccess, Payload: "done without error"})
 			fmt.Fprintf(w, "")
 		}
 	} else {
