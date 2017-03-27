@@ -30,11 +30,6 @@ func Run(command string, cc chan bool, out chan string) error {
 	}()
 
 	err = async.Go(func(cancel chan bool) error {
-		if err := cmd.Wait(); err != nil {
-			return err
-		}
-		return nil
-	}, func(cancel chan bool) error {
 		bi := bufio.NewScanner(stdout)
 		for {
 			if !bi.Scan() {
@@ -64,6 +59,10 @@ func Run(command string, cc chan bool, out chan string) error {
 		return nil
 	})
 	if err != nil {
+		return err
+	}
+
+	if err := cmd.Wait(); err != nil {
 		return err
 	}
 
