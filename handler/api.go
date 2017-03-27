@@ -30,8 +30,9 @@ func API(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		for _, c := range cmds {
+			command := c
 			fs = append(fs, func(cancel chan bool) error {
-				return cmd.Run(c, cancel, output)
+				return cmd.Run(command, cancel, output)
 			})
 		}
 
@@ -39,6 +40,7 @@ func API(w http.ResponseWriter, r *http.Request) {
 		done <- struct{}{}
 		if err != nil {
 			hub.Send(channel, &hub.Message{Type: hub.MessageTypeError, Payload: err.Error()})
+			fmt.Fprintf(w, "err; %v\n", err)
 		} else {
 			hub.Send(channel, &hub.Message{Type: hub.MessageTypeSuccess, Payload: "done without error"})
 			fmt.Fprintf(w, "")
