@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/rafaelsq/roar/async"
 	"github.com/rafaelsq/roar/cmd"
@@ -11,6 +12,16 @@ import (
 
 func API(w http.ResponseWriter, r *http.Request) {
 	channel := "all"
+	rawId := r.URL.Query()["id"]
+	var Id int
+	if len(rawId) > 0 {
+		Id, _ = strconv.Atoi(rawId[0])
+	}
+
+	go hub.Send(channel, &hub.Message{
+		Type:    hub.MessageTypeNewChannel,
+		Payload: map[string]interface{}{"Id": Id}})
+
 	cmds, ok := r.URL.Query()["cmd"]
 	if ok {
 		var fs []async.TypeFunc
@@ -22,7 +33,10 @@ func API(w http.ResponseWriter, r *http.Request) {
 			for {
 				select {
 				case m := <-output:
-					hub.Send(channel, &hub.Message{Payload: m})
+					hub.Send(channel, &hub.Message{Payload: map[string]interface{}{
+						"Id":   Id,
+						"Text": m,
+					}})
 				case <-done:
 					return
 				}
@@ -39,10 +53,22 @@ func API(w http.ResponseWriter, r *http.Request) {
 		err := async.Go(fs...)
 		done <- struct{}{}
 		if err != nil {
-			hub.Send(channel, &hub.Message{Type: hub.MessageTypeError, Payload: err.Error()})
+			hub.Send(channel, &hub.Message{
+				Type: hub.MessageTypeError,
+				Payload: map[string]interface{}{
+					"Id":   Id,
+					"Text": err.Error(),
+				},
+			})
 			fmt.Fprintf(w, "err; %v\n", err)
 		} else {
-			hub.Send(channel, &hub.Message{Type: hub.MessageTypeSuccess, Payload: "done without error"})
+			hub.Send(channel, &hub.Message{
+				Type: hub.MessageTypeSuccess,
+				Payload: map[string]interface{}{
+					"Id":   Id,
+					"Text": "done without error",
+				},
+			})
 			fmt.Fprintf(w, "")
 		}
 	} else {

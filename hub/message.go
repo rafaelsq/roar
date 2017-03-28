@@ -6,6 +6,7 @@ const (
 	MessageTypeNotification MessageType = iota
 	MessageTypeError
 	MessageTypeSuccess
+	MessageTypeNewChannel
 )
 
 type Message struct {
