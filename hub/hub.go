@@ -43,6 +43,9 @@ func Remove(channel, ID string) {
 }
 
 func Send(channel string, message *Message) (err error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	for ID := range pool[channel] {
 		err = pool[channel][ID].Conn.WriteJSON(message)
 	}
