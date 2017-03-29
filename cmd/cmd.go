@@ -7,7 +7,7 @@ import (
 	"github.com/rafaelsq/roar/async"
 )
 
-func Run(command string, cc chan bool, out chan string) error {
+func Run(command string, cc chan bool, out chan Msg) error {
 	cmd := exec.Command(command)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -36,7 +36,7 @@ func Run(command string, cc chan bool, out chan string) error {
 				break
 			}
 
-			out <- bi.Text()
+			out <- Msg{Text: bi.Text(), Command: command}
 		}
 
 		if err := bi.Err(); err != nil {
@@ -50,7 +50,7 @@ func Run(command string, cc chan bool, out chan string) error {
 				break
 			}
 
-			out <- bi.Text()
+			out <- Msg{Text: bi.Text(), Type: Error, Command: command}
 		}
 
 		if err := bi.Err(); err != nil {

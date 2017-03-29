@@ -18,15 +18,19 @@ func API(w http.ResponseWriter, r *http.Request) {
 		Id, _ = strconv.Atoi(rawId[0])
 	}
 
-	go hub.Send(channel, &hub.Message{
-		Type:    hub.MessageTypeNewChannel,
-		Payload: map[string]interface{}{"Id": Id}})
-
 	cmds, ok := r.URL.Query()["cmd"]
 	if ok {
+		go hub.Send(channel, &hub.Message{
+			Type: hub.MessageTypeNewChannel,
+			Payload: map[string]interface{}{
+				"Id":       Id,
+				"Commands": cmds,
+			},
+		})
+
 		var fs []async.TypeFunc
 
-		output := make(chan string)
+		output := make(chan cmd.Msg)
 		done := make(chan struct{}, 1)
 
 		go func() {
@@ -34,8 +38,10 @@ func API(w http.ResponseWriter, r *http.Request) {
 				select {
 				case m := <-output:
 					hub.Send(channel, &hub.Message{Payload: map[string]interface{}{
-						"Id":   Id,
-						"Text": m,
+						"Id":      Id,
+						"Text":    m.Text,
+						"Type":    m.Type,
+						"Command": m.Command,
 					}})
 				case <-done:
 					return

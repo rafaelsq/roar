@@ -7,8 +7,8 @@ const store = new Vuex.Store({
         addLine: function(state, line) {
             state.lines = [...state.lines, line]
         },
-        addActives: function(state, Id) {
-            state.actives = [...state.actives, Id]
+        addActives: function(state, active) {
+            state.actives = [...state.actives, active]
         }
     }
 })
@@ -21,7 +21,13 @@ const cmd = {
                <h2 class="subtitle">from all jobs</h2>\
                <hr />\
                <div class="content">\
-                   <div v-for="l in list" :key="l.Payload.Id" :class="{notification: l.Type > 0, \'is-danger\': l.Type == 1, \'is-success\': l.Type ==2}">{{ l.Payload.Text }}</div>\
+                   <div class="columns">\
+                        <div class="column" v-for="c in active.Commands">\
+                            <h3>{{ c }}</h3>\
+                           <div v-for="l in filterByCommand(c)" :key="l.Payload.Id" :class="{notification: l.Type > 0, \'is-danger\': l.Type == 1, \'is-success\': l.Type ==2}">{{ l.Payload.Text }}</div>\
+                        </div>\
+                   </div>\
+                   <div v-for="l in listCommon" class="notification" :class="{\'is-danger\': l.Type == 1, \'is-success\': l.Type ==2}">{{ l.Payload.Text }}</div>\
                </div>\
            </div>\
        </section>',
@@ -36,9 +42,29 @@ const cmd = {
             this.Id = parseInt(to.params.Id, 10)
         }
     },
+    methods: {
+        filterByCommand: function(cmd) {
+            return this.items.filter((o) => o.Payload.Command === cmd)
+        }
+    },
     computed: {
-        list: function() {
-            return this.$store.state.lines.filter((o) =>o.Payload.Id === this.Id) 
+        listCommon: function() {
+            return this.items.filter((o) => !o.Payload.Command)
+        },
+        items: function() {
+            return this.$store.state.lines.filter((o) => o.Payload.Id === this.Id)
+        },
+        active: function() {
+            if (!this.Id) {
+                return {Commands: []}
+            }
+
+            const matchs = this.$store.state.actives.filter((a) => a.Id === this.Id)
+            if (matchs.length) {
+                return matchs[0]
+            }
+
+            return {Commands: []}
         }
     }
 }
@@ -53,7 +79,7 @@ new Vue({
             return new Date().getFullYear()
         },
         actives: function() {
-            return this.$store.state.actives.map((Id) => ({Id, Path: "/cmd/" + Id}))
+            return this.$store.state.actives.map((a) => ({Id: a.Id, Path: "/cmd/" + a.Id}))
         }
     },
     mounted: function() {
@@ -116,7 +142,7 @@ function connectWebsocket() {
     ws.onmessage = function(e) {
         const msg = JSON.parse(e.data)
         if (msg.Type == 3) {
-            store.commit("addActives", msg.Payload.Id)
+            store.commit("addActives", msg.Payload)
         } else {
             store.commit("addLine", msg)
         }
