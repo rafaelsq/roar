@@ -13,6 +13,10 @@ const store = new Vuex.Store({
     }
 })
 
+const TypeSuccess = 2
+const TypeError = 1
+const SubTypeError = 1
+
 const cmd = {
     template: '\
        <section class="section">\
@@ -22,16 +26,22 @@ const cmd = {
                <hr />\
                <div class="content">\
                    <div class="columns">\
-                        <div class="column" v-for="c in active.Commands">\
+                        <div class="column is-output" v-for="c in active.Commands">\
                             <h3>{{ c }}</h3>\
-                           <div v-for="l in filterByCommand(c)" :key="l.Payload.Id" :class="{notification: l.Type > 0, \'is-danger\': l.Type == 1, \'is-success\': l.Type ==2}">{{ l.Payload.Text }}</div>\
+                            <div v-for="l in filterByCommand(c)"\
+                                :key="l.Payload.Id"\
+                                :class="{\'is-error\': l.Payload.Type === SubTypeError}">{{ l.Payload.Text }}</div>\
                         </div>\
                    </div>\
-                   <div v-for="l in listCommon" class="notification" :class="{\'is-danger\': l.Type == 1, \'is-success\': l.Type ==2}">{{ l.Payload.Text }}</div>\
+                   <div v-for="l in listCommon" class="notification"\
+                        :class="{\'is-danger\': l.Type == TypeError, \'is-success\': l.Type == TypeSuccess}">{{ l.Payload.Text }}</div>\
                </div>\
            </div>\
        </section>',
     data: () => ({
+        TypeSuccess,
+        TypeError,
+        SubTypeError,
         Id: 0
     }),
     mounted: function() {

@@ -1,0 +1,2 @@
+.column.is-output div {padding-left: 0.5em}
+.column.is-output div.is-error {background-color: #ef7a7a; color: #fff}
