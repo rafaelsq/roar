@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -28,7 +29,7 @@ func API(w http.ResponseWriter, r *http.Request) {
 			},
 		})
 
-		var fs []async.TypeFunc
+		var fs []func(context.Context) error
 
 		output := make(chan cmd.Msg)
 		done := make(chan struct{}, 1)
@@ -51,12 +52,12 @@ func API(w http.ResponseWriter, r *http.Request) {
 
 		for _, c := range cmds {
 			command := c
-			fs = append(fs, func(cancel chan bool) error {
-				return cmd.Run(command, cancel, output)
+			fs = append(fs, func(ctx context.Context) error {
+				return cmd.Run(ctx, command, output)
 			})
 		}
 
-		err := async.Go(fs...)
+		err := async.Run(r.Context(), fs...)
 		done <- struct{}{}
 		if err != nil {
 			hub.Send(channel, &hub.Message{

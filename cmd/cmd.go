@@ -2,12 +2,13 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"os/exec"
 
 	"github.com/rafaelsq/roar/async"
 )
 
-func Run(command string, cc chan bool, out chan Msg) error {
+func Run(ctx context.Context, command string, out chan Msg) error {
 	cmd := exec.Command(command)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -24,12 +25,11 @@ func Run(command string, cc chan bool, out chan Msg) error {
 	}
 
 	go func() {
-		if <-cc {
-			_ = cmd.Process.Kill()
-		}
+		<-ctx.Done()
+		_ = cmd.Process.Kill()
 	}()
 
-	err = async.Go(func(cancel chan bool) error {
+	err = async.Run(ctx, func(ctx context.Context) error {
 		bi := bufio.NewScanner(stdout)
 		for {
 			if !bi.Scan() {
@@ -43,7 +43,7 @@ func Run(command string, cc chan bool, out chan Msg) error {
 			return err
 		}
 		return nil
-	}, func(cancel chan bool) error {
+	}, func(ctx context.Context) error {
 		bi := bufio.NewScanner(stderr)
 		for {
 			if !bi.Scan() {

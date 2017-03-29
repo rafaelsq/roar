@@ -1,49 +1,41 @@
 package async
 
 import (
+	"context"
 	"fmt"
 	"sync"
 )
 
 type TypeFunc func(chan bool) error
 
-func Go(fs ...TypeFunc) error {
+func Run(parent context.Context, fns ...func(ctx context.Context) error) error {
 	cerr := make(chan error, 1)
-	ccancel := make(chan bool, len(fs))
+	ctx, cancelFn := context.WithCancel(parent)
 
 	go func() {
 		var wg sync.WaitGroup
+		wg.Add(len(fns))
 
-		wg.Add(len(fs))
-		for _, rawF := range fs {
-			f := rawF
-
-			go func() {
+		for _, fn := range fns {
+			go func(fn func(ctx context.Context) error) {
+				defer wg.Done()
 				defer func() {
-					wg.Done()
-				}()
-				defer func() {
-					if e := recover(); e != nil {
-						cerr <- fmt.Errorf("async: panic %v", e)
+					if err := recover(); err != nil {
+						cancelFn()
+						cerr <- fmt.Errorf("async.Run: panic %v", err)
 					}
 				}()
 
-				if e := f(ccancel); e != nil {
-					cerr <- e
+				if err := fn(ctx); err != nil {
+					cancelFn()
+					cerr <- err
 				}
-			}()
+			}(fn)
 		}
 
 		wg.Wait()
-		close(cerr)
+		cerr <- nil
 	}()
 
-	err := <-cerr
-	defer func() {
-		defer close(ccancel)
-		for _ = range fs {
-			ccancel <- err != nil
-		}
-	}()
-	return err
+	return <-cerr
 }
